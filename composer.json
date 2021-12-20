@@ -2,17 +2,17 @@
   "name": "sebk/small-orm-swoole",
   "licence": "GPL-3.0-only",
   "type": "library",
-  "autoload": {
-    "psr-4": { "Sebk\\SmallOrmSwoole\\": "" }
-  },
-  "require": {
-    "swoole": "4.*",
-    "sebk/small-orm-core": "1.*"
-  },
   "authors": [
     {
       "name": "Sébastien Kus",
       "email": "seb@small-iceberg.dev"
     }
-  ]
+  ],
+  "require": {
+    "swoole": "4.*",
+    "sebk/small-orm-core": "1.*"
+  },
+  "autoload": {
+    "psr-4": { "Sebk\\SmallOrmSwoole\\": "" }
+  }
 }
