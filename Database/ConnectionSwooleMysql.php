@@ -7,74 +7,111 @@
 
 namespace Sebk\SmallOrmSwoole\Database;
 
+use mysql_xdevapi\Exception;
+use Sebk\SmallOrmCore\Database\AbstractConnection;
+use Sebk\SmallOrmCore\Database\ConnectionException;
+
+use Sebk\SmallOrmSwoole\Pool\Connection;
+use Sebk\SmallOrmSwoole\Pool\PdoMysqlPool;
+use Swoole\Database\PDOConfig;
+use Swoole\Database\PDOPool;
+
 /**
  * Connection to mysql database
  */
 class ConnectionSwooleMysql extends AbstractConnection
 {
-    protected $mysql;
+    const MAX_CONNECTIONS = 1000;
+
+    /** @var PdoMysqlPool */
+    private $pool;
 
     /**
-     * Connect to database, use existing connection if exists
+     * Create mysql object, use existing if exists and connect
      * @throws ConnectionException
      */
     public function connect($forceReconnect = false)
     {
-        // Connect to database
-        $connectionString = "mysql:dbname=;host=$this->host;charset=$this->encoding";
-
-        if ($this->mysql == null) {
-            $this->mysql = new Swoole\Coroutine\MySQL();
-            $forceReconnect = true;
+        if ($this->pool == null) {
+            $this->pool = new PDOPool(
+                (new PDOConfig())
+                    ->withHost($this->host)
+                    ->withPort(3306)
+                    // ->withUnixSocket('/tmp/mysql.sock')
+                    ->withDbName($this->database)
+                    ->withCharset($this->encoding)
+                    ->withUsername($this->user)
+                    ->withPassword($this->password)
+                    ->withOptions([\PDO::ATTR_PERSISTENT => true]),
+                static::MAX_CONNECTIONS
+            );
         }
 
-        if ($forceReconnect) {
-            $this->mysql->connect([
-                'host' => $this->database,
-                'user' => $this->user,
-                'password' => $this->password,
-                'charset' => $this->encoding,
-            ]);
-        }
-
-        return $this->mysql;
+        return $this->pool;
     }
 
     /**
      * Execute sql instruction
      * @param $sql
-     * @param array $params
-     * @param bool $retry
-     * @return mixed
+     * @param $params
+     * @param $retry
+     * @param $forceConnection
+     * @return array
      * @throws ConnectionException
      */
-    public function execute($sql, $params = array(), $retry = false, $forceConnection = null)
+    public function execute($sql, $params = [], $retry = false, $forceConnection = null)
     {
-        if ($forceConnection === null) {
-            $pdo = $this->connect();
-        } else {
-            $pdo = $forceConnection;
-        }
+        $this->connect();
 
-        $statement = $pdo->prepare($sql);
+        // Get connection
+        /** @var \PDO $pdo */
+        $pdo = $this->pool->get();
 
-        foreach ($params as $param => $value) {
-            $statement->bindValue(":".$param, $value);
-        }
-        if ($statement->execute()) {
-            return $statement->fetchAll(\PDO::FETCH_ASSOC);
-        } else {
-            $errInfo = $statement->errorInfo();
-            if($errInfo[0] == "HY000" && $errInfo[1] == "2006" && !$retry) {
-                $pdo = null;
-                $this->connect();
-                return $this->execute($sql, $params, true);
+        // Execute
+        if (!in_array(strtolower(explode(" ", trim($sql))[0]), "insert", "update")) {
+            $statement = $pdo->prepare($sql);
+
+            foreach ($params as $param => $value) {
+                $statement->bindValue(":" . $param, $value);
+            }
+            if ($statement->execute()) {
+                $result = $statement->fetchAll(\PDO::FETCH_ASSOC);
             } else {
                 throw new ConnectionException("Fail to execute request : SQLSTATE[" . $errInfo[0] . "][" . $errInfo[1] . "] " . $errInfo[2]);
             }
-        }
-    }
+        } elseif (strtolower(explode(" ", trim($sql))[0]) == "insert") {
+            $statement = $pdo->prepare($sql);
 
+            foreach ($params as $param => $value) {
+                $statement->bindValue(":" . $param, $value);
+            }
+            if ($statement->execute()) {
+                $result = $statement->fetchAll(\PDO::FETCH_ASSOC);
+            } else {
+                throw new ConnectionException("Fail to execute request : SQLSTATE[" . $errInfo[0] . "][" . $errInfo[1] . "] " . $errInfo[2]);
+            }
+            $result = (int)$pdo->lastInsertId();
+        } else {
+            $statement = $pdo->prepare($sql);
+
+            foreach ($params as $param => $value) {
+                $statement->bindValue(":" . $param, $value);
+            }
+            if ($statement->execute()) {
+                $result = $statement->fetchAll(\PDO::FETCH_ASSOC);
+            } else {
+                throw new ConnectionException("Fail to execute request : SQLSTATE[" . $errInfo[0] . "][" . $errInfo[1] . "] " . $errInfo[2]);
+            }
+            $result = null;
+        }
+        $pdo->
+
+        // Release connection
+        $this->pool->put($pdo);
+
+        return $result;
+    }
+    
     /**
      * Start transaction
      * @return $this
@@ -83,14 +120,7 @@ class ConnectionSwooleMysql extends AbstractConnection
      */
     public function startTransaction()
     {
-        if($this->getTransactionInUse()) {
-            throw new TransactionException("Transaction already started");
-        }
-
-        $this->execute("START TRANSACTION");
-        $this->transactionInUse = true;
-
-        return $this;
+        throw new Exception("Not yet supported");
     }
 
     /**
@@ -101,15 +131,7 @@ class ConnectionSwooleMysql extends AbstractConnection
      */
     public function commit()
     {
-        if(!$this->getTransactionInUse()) {
-            throw new TransactionException("Transaction not started");
-        }
-
-        $this->execute("COMMIT");
-
-        $this->transactionInUse = false;
-
-        return $this;
+        throw new Exception("Not yet supported");
     }
 
     /**
@@ -120,15 +142,7 @@ class ConnectionSwooleMysql extends AbstractConnection
      */
     public function rollback()
     {
-        if(!$this->getTransactionInUse()) {
-            throw new TransactionException("Transaction not started");
-        }
-
-        $this->execute("ROLLBACK");
-
-        $this->transactionInUse = false;
-
-        return $this;
+        throw new Exception("Not yet supported");
     }
 
     /**
@@ -137,6 +151,6 @@ class ConnectionSwooleMysql extends AbstractConnection
      */
     public function lastInsertId()
     {
-        return $this->pdo->lastInsertId();
+        throw new Exception("Not yet supported");
     }
 }
