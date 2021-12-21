@@ -24,7 +24,7 @@ class ConnectionSwooleMysql extends AbstractConnection
     const MAX_CONNECTIONS = 1000;
 
     /** @var PdoMysqlPool */
-    private $pool;
+    public $pool;
 
     /**
      * Create mysql object, use existing if exists and connect
@@ -45,9 +45,19 @@ class ConnectionSwooleMysql extends AbstractConnection
                     ->withOptions([\PDO::ATTR_PERSISTENT => true]),
                 static::MAX_CONNECTIONS
             );
+            $this->pool->fill();
         }
 
         return $this->pool;
+    }
+
+    /**
+     * Get next pdo in pool
+     * @return \PDO
+     */
+    public function getPdo()
+    {
+        return $this->pool->get();
     }
 
     /**
@@ -64,11 +74,15 @@ class ConnectionSwooleMysql extends AbstractConnection
         $this->connect();
 
         // Get connection
-        /** @var \PDO $pdo */
-        $pdo = $this->pool->get();
+        if ($forceConnection == null) {
+            /** @var \PDO $pdo */
+            $pdo = $this->pool->get();
+        } else {
+            $pdo = $forceConnection;
+        }
 
         // Execute
-        if (!in_array(strtolower(explode(" ", trim($sql))[0]), "insert", "update")) {
+        if (!in_array(strtolower(explode(" ", trim($sql))[0]), ["insert", "update"])) {
             $statement = $pdo->prepare($sql);
 
             foreach ($params as $param => $value) {
@@ -104,7 +118,6 @@ class ConnectionSwooleMysql extends AbstractConnection
             }
             $result = null;
         }
-        $pdo->
 
         // Release connection
         $this->pool->put($pdo);
