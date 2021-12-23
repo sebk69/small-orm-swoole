@@ -74,11 +74,11 @@ class ConnectionSwooleMysql extends AbstractConnection
         $this->connect();
 
         // Get connection
-        if ($forceConnection == null) {
+        if ($forceConnection != null && $forceConnection instanceof \PDO) {
+            $pdo = $forceConnection;
+        } else {
             /** @var \PDO $pdo */
             $pdo = $this->pool->get();
-        } else {
-            $pdo = $forceConnection;
         }
 
         // Execute
