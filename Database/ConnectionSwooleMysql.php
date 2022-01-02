@@ -11,6 +11,7 @@ use mysql_xdevapi\Exception;
 use Sebk\SmallOrmCore\Database\AbstractConnection;
 use Sebk\SmallOrmCore\Database\ConnectionException;
 
+use Sebk\SmallOrmCore\Database\ConnectionMysql;
 use Sebk\SmallOrmSwoole\Pool\Connection;
 use Sebk\SmallOrmSwoole\Pool\PdoMysqlPool;
 use Swoole\Database\PDOConfig;
@@ -25,6 +26,15 @@ class ConnectionSwooleMysql extends AbstractConnection
 
     /** @var PdoMysqlPool */
     public $pool;
+
+    /**
+     * Get fallback connection type if executed from symfony console
+     * @return string
+     */
+    public static function getFallbackForCli()
+    {
+        return "mysql";
+    }
 
     /**
      * Create mysql object, use existing if exists and connect
