@@ -26,10 +26,10 @@ class ConnectionSwooleRedis extends AbstractConnection
      * Get fallback connection type if executed from symfony console
      * @return string
      */
-    public static function getFallbackForCli()
+    /**public static function getFallbackForCli()
     {
         return "redis";
-    }
+    }**/
 
     /**
      * Create redis object, use existing if exists and connect
