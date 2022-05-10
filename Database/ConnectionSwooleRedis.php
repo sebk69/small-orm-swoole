@@ -10,8 +10,8 @@ namespace Sebk\SmallOrmSwoole\Database;
 use mysql_xdevapi\Exception;
 use Sebk\SmallOrmCore\Database\AbstractConnection;
 use Sebk\SmallOrmCore\Database\ConnectionException;
-use Swoole\Database\RedisConfig;
-use Swoole\Database\RedisPool;
+use Sebk\SmallOrmSwoole\Pool\PRedisConfig;
+use Sebk\SmallOrmSwoole\Pool\PRedisPool;
 
 /**
  * Connection to redis database
@@ -38,9 +38,8 @@ class ConnectionSwooleRedis extends AbstractConnection
     public function connect($forceReconnect = false)
     {
         if ($this->pool == null) {
-            $this->pool = new RedisPool(
-                (new RedisConfig())
-                    ->withHost($this->host),
+            $this->pool = new PRedisPool(
+                new PRedisConfig($this->host, []),
                 static::MAX_CONNECTIONS
             );
             $this->pool->fill();
@@ -62,7 +61,7 @@ class ConnectionSwooleRedis extends AbstractConnection
     {
         $this->connect();
 
-        if (!isset($params["key"])) {
+        if (!array_key_exists("key", $params) && !in_array($sql,  ["keys"])) {
             throw new \Exception("Fail to query redis : \$param['key'] must be defined");
         }
 
@@ -77,6 +76,9 @@ class ConnectionSwooleRedis extends AbstractConnection
                 break;
             case "del":
                 $result = $this->del($params["key"], $con);
+                break;
+            case "keys":
+                $result = $this->keys($params, $con);
                 break;
 
             default:
@@ -146,6 +148,16 @@ class ConnectionSwooleRedis extends AbstractConnection
         }
 
         return $this;
+    }
+
+    protected function keys(array $params, $con)
+    {
+        $result = [];
+        foreach ($params as $key => $pattern) {
+            $result = array_merge($result, $con->keys($key . ":" . $pattern));
+        }
+
+        return $result;
     }
 
     /**
