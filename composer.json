@@ -9,7 +9,6 @@
     }
   ],
   "require": {
-    "ext-swoole": "4.*",
     "sebk/small-orm-core": "1.*"
   },
   "autoload": {
