@@ -14,6 +14,7 @@ use Sebk\SmallOrmCore\Database\ConnectionException;
 use Sebk\SmallOrmCore\Database\ConnectionMysql;
 use Sebk\SmallOrmSwoole\Pool\Connection;
 use Sebk\SmallOrmSwoole\Pool\PdoMysqlPool;
+use Swoole\Coroutine;
 use Swoole\Database\PDOConfig;
 use Swoole\Database\PDOPool;
 
@@ -42,6 +43,14 @@ class ConnectionSwooleMysql extends AbstractConnection
      */
     public function connect($forceReconnect = false)
     {
+        if (Coroutine::getuid() === -1) {
+            $result = null;
+            \Co\run(function() use($forceReconnect, &$result) {
+                $result = $this->connect($forceReconnect);
+            });
+            return $result;
+        }
+
         if ($this->pool == null) {
             $this->pool = new PDOPool(
                 (new PDOConfig())
@@ -67,6 +76,14 @@ class ConnectionSwooleMysql extends AbstractConnection
      */
     public function getPdo()
     {
+        if (Coroutine::getuid() === -1) {
+            $result = null;
+            \Co\run(function() use($forceReconnect, &$result) {
+                $result = $this->pool->get();
+            });
+            return $result;
+        }
+
         return $this->pool->get();
     }
 
@@ -81,6 +98,14 @@ class ConnectionSwooleMysql extends AbstractConnection
      */
     public function execute($sql, $params = [], $retry = false, $forceConnection = null)
     {
+        if (Coroutine::getuid() === -1) {
+            $result = null;
+            \Co\run(function() use($sql, $params, $retry, $forceConnection, &$result) {
+                $result = $this->execute($sql, $params, $retry, $forceConnection);
+            });
+            return $result;
+        }
+
         $this->connect();
 
         // Get connection

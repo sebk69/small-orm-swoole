@@ -12,6 +12,7 @@ use Sebk\SmallOrmCore\Database\AbstractConnection;
 use Sebk\SmallOrmCore\Database\ConnectionException;
 use Sebk\SmallOrmSwoole\Pool\PRedisConfig;
 use Sebk\SmallOrmSwoole\Pool\PRedisPool;
+use Swoole\Coroutine;
 
 /**
  * Connection to redis database
@@ -23,20 +24,19 @@ class ConnectionSwooleRedis extends AbstractConnection
     public $pool;
 
     /**
-     * Get fallback connection type if executed from symfony console
-     * @return string
-     */
-    /**public static function getFallbackForCli()
-    {
-        return "redis";
-    }**/
-
-    /**
      * Create redis object, use existing if exists and connect
      * @throws ConnectionException
      */
     public function connect($forceReconnect = false)
     {
+        if (Coroutine::getuid() === -1) {
+            $result = null;
+            \Co\run(function() use($forceReconnect, &$result) {
+                $result = $this->connect($forceReconnect);
+            });
+            return $result;
+        }
+
         if ($this->pool == null) {
             $this->pool = new PRedisPool(
                 new PRedisConfig($this->host, []),
@@ -59,6 +59,14 @@ class ConnectionSwooleRedis extends AbstractConnection
      */
     public function execute($sql, $params = [], $retry = false, $forceConnection = null)
     {
+        if (Coroutine::getuid() === -1) {
+            $result = null;
+            \Co\run(function() use($sql, $params, $retry, $forceConnection, &$result) {
+                $result = $this->execute($sql, $params, $retry, $forceConnection);
+            });
+            return $result;
+        }
+
         $this->connect();
 
         if (!array_key_exists("key", $params) && !in_array($sql,  ["keys"])) {
