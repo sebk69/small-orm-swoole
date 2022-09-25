@@ -9,7 +9,7 @@
     }
   ],
   "require": {
-    "sebk/small-orm-core": "1.*"
+    "sebk/small-orm-core": ">=1.0"
   },
   "autoload": {
     "psr-4": { "Sebk\\SmallOrmSwoole\\": "" }
