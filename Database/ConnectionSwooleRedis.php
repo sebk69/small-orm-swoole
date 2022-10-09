@@ -161,8 +161,8 @@ class ConnectionSwooleRedis extends AbstractConnection
     protected function keys(array $params, $con)
     {
         $result = [];
-        foreach ($params as $key => $pattern) {
-            $result = array_merge($result, $con->keys($key . ":" . $pattern));
+        foreach ($params["key"] as $pattern) {
+            $result = array_merge($result, $con->keys($pattern));
         }
 
         return $result;
