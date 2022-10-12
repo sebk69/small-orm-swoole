@@ -165,6 +165,10 @@ class ConnectionSwooleRedis extends AbstractConnection
             $result = array_merge($result, $con->keys($pattern));
         }
 
+        if (!is_array($result)) {
+            return [];
+        }
+
         return $result;
     }
 
