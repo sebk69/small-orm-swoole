@@ -64,7 +64,6 @@ class ConnectionSwooleMysql extends AbstractConnection
                     ->withOptions([\PDO::ATTR_PERSISTENT => true]),
                 static::MAX_CONNECTIONS
             );
-            $this->pool->fill();
         }
 
         return $this->pool;
