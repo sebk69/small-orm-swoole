@@ -7,11 +7,11 @@
 
 namespace Sebk\SmallOrmSwoole\Database;
 
-use mysql_xdevapi\Exception;
 use Sebk\SmallOrmCore\Database\AbstractConnection;
 use Sebk\SmallOrmCore\Database\ConnectionException;
 use Sebk\SmallOrmSwoole\Pool\PRedisConfig;
-use Sebk\SmallOrmSwoole\Pool\PRedisPool;
+use Sebk\SmallSwoolePatterns\Manager\Connection\PRedisClientManager;
+use Sebk\SmallSwoolePatterns\Pool\Pool;
 use Swoole\Coroutine;
 
 /**
@@ -19,7 +19,7 @@ use Swoole\Coroutine;
  */
 class ConnectionSwooleRedis extends AbstractConnection
 {
-    const MAX_CONNECTIONS = 1000;
+    const MAX_CONNECTIONS = 100;
 
     public $pool;
 
@@ -38,8 +38,7 @@ class ConnectionSwooleRedis extends AbstractConnection
         }
 
         if ($this->pool == null) {
-            $this->pool = new PRedisPool(
-                new PRedisConfig($this->host, []),
+            $this->pool = new Pool(new PRedisClientManager($this->host),
                 static::MAX_CONNECTIONS
             );
             $this->pool->fill();
