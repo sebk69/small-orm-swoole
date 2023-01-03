@@ -9,7 +9,8 @@
     }
   ],
   "require": {
-    "sebk/small-orm-core": ">=1.0"
+    "sebk/small-orm-core": ">=1.0",
+    "sebk/small-swoole-patterns": ">=1.0.1"
   },
   "autoload": {
     "psr-4": { "Sebk\\SmallOrmSwoole\\": "" }

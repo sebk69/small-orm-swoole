@@ -14,6 +14,8 @@ use Sebk\SmallOrmCore\Database\ConnectionException;
 use Sebk\SmallOrmCore\Database\ConnectionMysql;
 use Sebk\SmallOrmSwoole\Pool\Connection;
 use Sebk\SmallOrmSwoole\Pool\PdoMysqlPool;
+use Sebk\SmallSwoolePatterns\Manager\Connection\MysqlClientManager;
+use Sebk\SmallSwoolePatterns\Pool\Pool;
 use Swoole\Coroutine;
 use Swoole\Database\PDOConfig;
 use Swoole\Database\PDOPool;
@@ -23,7 +25,7 @@ use Swoole\Database\PDOPool;
  */
 class ConnectionSwooleMysql extends AbstractConnection
 {
-    const MAX_CONNECTIONS = 1000;
+    const MAX_CONNECTIONS = 100;
 
     /** @var PdoMysqlPool */
     public $pool;
@@ -52,18 +54,13 @@ class ConnectionSwooleMysql extends AbstractConnection
         }
 
         if ($this->pool == null) {
-            $this->pool = new PDOPool(
-                (new PDOConfig())
-                    ->withHost($this->host)
-                    ->withPort(3306)
-                    // ->withUnixSocket('/tmp/mysql.sock')
-                    ->withDbName($this->database)
-                    ->withCharset($this->encoding)
-                    ->withUsername($this->user)
-                    ->withPassword($this->password)
-                    ->withOptions([\PDO::ATTR_PERSISTENT => true]),
-                static::MAX_CONNECTIONS
-            );
+            $this->pool = new Pool(new MysqlClientManager(
+                $this->database,
+                $this->host,
+                $this->encoding,
+                $this->user,
+                $this->password
+            ), self::MAX_CONNECTIONS);
         }
 
         return $this->pool;
