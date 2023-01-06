@@ -41,7 +41,6 @@ class ConnectionSwooleRedis extends AbstractConnection
             $this->pool = new Pool(new PRedisClientManager($this->host),
                 static::MAX_CONNECTIONS
             );
-            $this->pool->fill();
         }
 
         return $this->pool;
